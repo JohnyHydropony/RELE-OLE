@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+	<link rel="icon" href="favicon.ico" type="image/x-icon">
+
+	
+	<script type="text/javascript" src="files/jquery.js"></script>
+	<script type="text/javascript" src="files/ipmask.js"></script>
+	
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8; no-cache;">
+    <title>КПА техно - Настройки TCP/IP</title>
+    <link rel="stylesheet" type="text/css" href="files/common.css">
+	<script>
+		function pageLoaded() {
+			var req=new XMLHttpRequest();
+			req.onreadystatechange = function() {
+				if (req.readyState == 4){
+				if (req.status == 200 || window.location.href.indexOf("http") == -1){
+					var obj = JSON.parse(req.responseText);
+		
+					document.getElementsByName('ip')[0].value = obj.ip[0] + '.' + obj.ip[1] + '.' + obj.ip[2] + '.' + obj.ip[3];
+					document.getElementsByName('sub')[0].value = obj.sub[0] + '.' + obj.sub[1] + '.' + obj.sub[2] + '.' + obj.sub[3];
+					document.getElementsByName('gw')[0].value = obj.gw[0] + '.' + obj.gw[1] + '.' + obj.gw[2] + '.' + obj.gw[3];
+					
+					if (obj.rf)
+					{
+						document.getElementById('message').style.display = '';
+					}
+					else
+					{
+						document.getElementById('message').style.display = 'none';
+					}
+				}
+				else {
+					alert("An error has occured making the request");
+				}
+				}
+			}
+			req.open("POST", "GetStateTCP", true);
+			req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			req.send();
+		}
+	</script>
+</head>
+<body onload="JavaScript: pageLoaded();">
+<div id="content" class="effect8">
+    <div id="main_tbl">
+		<div class="head_title">
+			<div class="logo_"><a href="index.htm"><img class="logo" src="files/logo.png" alt="КПА техно" title="КПА техно" /></a></div>
+			<div class="empty">&nbsp;&nbsp;&nbsp;БКА-7-1&nbsp;&nbsp;&nbsp;</div>
+		</div>
+	<table border=0 width="100%" height="100%" cellpadding=0 cellspacing=0>
+		<tr><td colspan="2">
+			<div style="display:none;" id="message">Настройки были изменены, для того, чтобы они вступили в силу, необходимо перезагрузить устройство. <a href="restartArduino">Перезагрузить сейчас!</a></div>	
+	   	</td></tr>
+		<tr>
+			<td width="25%" valign="top">
+		
+				<div id="l_menu">
+				   <div class="lmenu_item"><a href="index.htm">Управление реле</a></div>
+				   <div class="lmenu_item"><a href="tcp.htm">Настройки TCP/IP</a></div>
+				</div>        
+			</td>
+			<td valign="top">
+				<div id="sub_content">
+					<div class="head1_txt"><h1>Настройки TCP/IP</h1></div>
+					<form method="get" action="SetSettings" style="margin:0px; padding:0px;">
+						<fieldset style="border: none;margin:0px; padding-left:0px;">
+						<div class="fieldset-area">
+							<div class="lable-for">IP-адрес: </div><div class="form-field"><input type="text" value="" id="ip" class="ip" name="ip"></div>
+							<div class="form-clear"></div>
+							
+							<div class="lable-for"`>Маска подсети:</div><div class="form-field"><input type="text" value="" id="sub" class="ip" name="sub"></div>
+							<div class="form-clear"></div>
+							
+							<div class="lable-for">Шлюз: </div><div class="form-field"><input type="text" value="" id="gw" class="ip"name="gw"></div>
+							<div class="form-clear"></div>
+							
+							<div class="submit"><input style="margin-top:10px;" class="sbmt" type="submit" value="Сохранить"></div>
+						</div>
+						</fieldset>
+					</form>
+				  </div>
+				</td></tr></table>
+     
+			 </div>
+	
+</div>
+<div class="copyright">&copy; КПА-техно 2016 </div>
+
+<script type="text/javascript">
+    $('.ip').ipmask();
+</script>
+
+
+</body>
+</html>

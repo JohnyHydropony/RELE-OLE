@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+	<link rel="icon" href="favicon.ico" type="image/x-icon">
+
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>КПА техно - Управление реле</title>
+		
+    <link rel="stylesheet" type="text/css" href="files/common.css">
+	
+	
+	<script>
+		function pageLoaded() {
+			  var req=new XMLHttpRequest();
+			  req.onreadystatechange = function() {
+				if (req.readyState == 4){
+				if (req.status == 200 || window.location.href.indexOf("http") == -1){
+					var obj = JSON.parse(req.responseText);
+					document.getElementsByName('r2')[0].checked = obj.r[0];
+					document.getElementsByName('r3')[0].checked = obj.r[1]
+
+					document.getElementsByName('r5')[0].checked = obj.r[3];
+					document.getElementsByName('r6')[0].checked = obj.r[4];
+					document.getElementsByName('r7')[0].checked = obj.r[5];
+					document.getElementsByName('r8')[0].checked = 
+					obj.r[6];
+					document.getElementsByName('r9')[0].checked = obj.r[7];
+					
+					if (obj.r[0] && obj.r[1] && obj.r[3] && obj.r[4] && obj.r[5] && obj.r[6] && obj.r[7])
+					{
+                        document.getElementById('select_all').checked = true;
+                    }
+					
+					
+					
+					if (obj.rf)
+					{
+						document.getElementById('message').style.display = '';
+					}
+					else
+					{
+						document.getElementById('message').style.display = 'none';
+					}
+					//document.getElementsByName('ip')[0].value = obj.ip[0] + '.' + obj.ip[1] + '.' + obj.ip[2] + '.' + obj.ip[3];
+					//document.getElementsByName('sub')[0].value = obj.sub[0] + '.' + obj.sub[1] + '.' + obj.sub[2] + '.' + obj.sub[3];
+					//document.getElementsByName('gw')[0].value = obj.gw[0] + '.' + obj.gw[1] + '.' + obj.gw[2] + '.' + obj.gw[3];
+				}
+				else {
+					alert("An error has occured making the request");
+				}
+				}
+			}
+			req.open("POST", "GetStatePins", true);
+			req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			req.send();
+		  }
+		  
+		  
+		  
+		  if(document.getElementsByClassName) {
+ 
+				getElementsByClass = function(classList, node) {   
+					return (node || document).getElementsByClassName(classList)
+				}
+			 
+			} else {
+			 
+				getElementsByClass = function(classList, node) {           
+					var node = node || document,
+					list = node.getElementsByTagName('*'),
+					length = list.length, 
+					classArray = classList.split(/\s+/),
+					classes = classArray.length,
+					result = [], i,j
+					for(i = 0; i < length; i++) {
+						for(j = 0; j < classes; j++)  {
+							if(list[i].className.search('\\b' + classArray[j] + '\\b') != -1) {
+								result.push(list[i])
+								break
+							}
+						}
+					}
+					return result
+				}
+			}
+		  
+		  
+		  var check_check = '0';
+		  function sel_all2(ClassName){
+			   if( !getElementsByClass(ClassName) ) return;
+			   if( !getElementsByClass(ClassName).length )
+				  getElementsByClass(ClassName)[i].checked = getElementsByClass(ClassName)[i].checked ? false : true;
+			   else {
+				  for(var i=0;i<getElementsByClass(ClassName).length;i++) {
+					 if (check_check=='0')
+						getElementsByClass(ClassName)[i].checked = true;
+					 else 
+						getElementsByClass(ClassName)[i].checked = false;
+				  }
+				  if (check_check=='0') check_check = '1';
+				  else check_check = '0';
+			   }
+			}
+
+		
+	</script>
+
+	
+</head>
+<body onLoad="JavaScript: pageLoaded();">
+<div id="content" class="effect8">
+
+		
+    <div id="main_tbl">
+		<div class="head_title">
+			<div class="logo_"><a href="index.htm" ><img class="logo" src="files/logo.png" alt="КПА техно" title="КПА техно" /></a></div>
+			<div class="empty">&nbsp;&nbsp;&nbsp;БКА-7-1&nbsp;&nbsp;&nbsp;</div>
+			
+		</div>
+		<table border="0" width="100%" height="100%" cellpadding=0 cellspacing=0>
+		<tr><td colspan="2">
+			<div style="display:none;" id="message">Настройки были изменены, для того, чтобы они вступили в силу, необходимо перезагрузить устройство. <a href="restartArduino">Перезагрузить сейчас!</a></div>	
+	   	</td></tr>
+		<tr>
+		<td width="25%" valign="top">
+		<div id="l_menu">
+			   <div class="lmenu_item"><a href="index.htm">Управление реле</a></div>
+			   <div class="lmenu_item"><a href="tcp.htm">Настройки TCP/IP</a></div>
+			</div>
+		</td>
+		<td valign="top">
+			<div id="sub_content">
+				<div class="head1_txt"><h1>Управление реле</h1></div>
+				<form method="get" action="SetPins" name="SetPins" style="margin:0px; padding:0px;">
+					<fieldset class="rele" style="border: none;margin:0px; padding-left:0px;">
+						<input class="ios" type="checkbox" value="0" id="select_all" onclick="sel_all2('ios')"><label class="selectall" for="select_all">Выделить всё</label><br><br>
+						
+						<nobr><input class="ios" type="checkbox" name="r2" id="r2" value="1"><label for="r2">Реле 2</label></nobr>
+						<nobr><input class="ios" type="checkbox" name="r3" id="r3" value="1"><label for="r3">Реле 3</label></nobr>
+		
+						<nobr><input class="ios" type="checkbox" name="r5" id="r5" value="1"><label for="r5">Реле 5</label></nobr>
+						<nobr><input class="ios" type="checkbox" name="r6" id="r6" value="1"><label for="r6">Реле 6</label></nobr>
+						<nobr><input class="ios" type="checkbox" name="r7" id="r7" value="1"><label for="r7">Реле 7</label></nobr>
+						<nobr><input class="ios" type="checkbox" name="r8" id="r8" value="1"><label for="r8">Реле 8</label></nobr>
+						<nobr><input class="ios" type="checkbox" name="r9" id="r9" value="1"><label for="r9">Реле 9</label></nobr>
+						<input type="submit" value="Обновить" class="sbmt">
+					</fieldset>
+				</form>
+		<script>//$(".ios").iosCheckbox();</script>
+	</div>
+		</td></tr></table>
+     </div>
+	
+</div>
+<div class="copyright">&copy; КПА-техно 2016 </div>
+</body>
+</html>

@@ -40,7 +40,8 @@ bool EnableWatchDog = true;
 bool RebootFlag = false; // обозначает необходимость перезагруки устройства, для применения новых настроек (TCP/IP)
 
 int i;
-int buttonResetEEP = 15; // 14 = A0, 15 = A1
+#define buttonResetEEP  15 // 14 = A0, 15 = A1
+#define SetupResetPin  7   // номер проверочного пина для обязательного программного ресета при запуске устройства
 
 String GetRebootFlagJSON()
 {
@@ -121,12 +122,45 @@ void initPins()
   
 }
 
+void SetupRestart()
+{
+    delay(500); 
+    pinMode(SetupResetPin, OUTPUT);
+    //програмный ресет
+    int val = digitalRead(SetupResetPin);
+    if (val == TURN_ON)
+    {
+      digitalWrite(SetupResetPin, TURN_OFF);
+      resetFunc();
+    }
+    else
+    {
+      digitalWrite(SetupResetPin, TURN_ON);
+    } 
 
+//    byte val; // полный ресет (с использованием вотчдога)
+//    val = EEPROM.read(254);
+//    if (val != 1)
+//    {
+//      Serial.println(1);// для отладки
+//      EEPROM.write(254, 1);
+//      digitalWrite(SetupResetPin, TURN_ON);
+//      rebootArduino();
+//    }
+//    else
+//    {
+//      digitalWrite(SetupResetPin, TURN_ON);
+//      Serial.println(2);// для отладки
+//      EEPROM.write(254, 0);
+//    }
 
+}
 
 void setup()
 {
   Serial.begin(9600);
+  SetupRestart();
+  
   initSettings();
   initSD();
   initPins();
@@ -138,22 +172,28 @@ void setup()
   Ethernet.begin(settings.mac, settings.ip, settings.gateway, settings.subnet);
   //Ethernet.begin( settings.mac, settings.ip);
   //Ethernet.begin(defaultMac, defaultIp);
+  
+  
   serverTcp.begin();
   server.begin();
-
+  
   if (EnableWatchDog)
     {
       wdt_enable(WDTO_8S);// start wath dog!!
     }
-  
+   
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
+  
 }
 
 
 void loop() {
-  
+  //digitalWrite(3, HIGH);   // turn the LED on (HIGH is the voltage level)
+  //  delay(1000);              // wait for a second
+  //  digitalWrite(3, LOW);    // turn the LED off by making the voltage LOW
+  //    delay(1000);              
 //    if (Serial.available() != 0 ) // for test WatchDog
 //    {
 //      digitalWrite(2, ! digitalRead(2));
@@ -167,7 +207,9 @@ void loop() {
 //    {
 //      wdt_reset();
 //      }
- if (EnableWatchDog)
+
+  
+    if (EnableWatchDog)
     {
       wdt_reset(); // reset wath dog timer!!
     }
@@ -178,6 +220,8 @@ void loop() {
   EthernetClient clientTcp = serverTcp.available();
   EthernetClient client = server.available();
 
+
+  
   if (client) 
   {
     boolean currentLineIsBlank = true;

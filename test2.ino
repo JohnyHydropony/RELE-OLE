@@ -4,6 +4,7 @@
 #include <SD.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
+#include <Base64.h>
 
 #define REQ_BUF_SZ   50
 #define PINS 8
@@ -25,6 +26,12 @@ char HTTP_req[REQ_BUF_SZ] = {0}; // buffered HTTP request stored as null termina
 char reqTcp[REQ_TCP_SZ] = {0}; // buffered HTTP request stored as null terminated string
 char req_index = 0;              // index into HTTP_req buffer
 
+char login[] = "login";           // Логин по дефолту. В дальнейшем необходимо измененные данные авторизации в Web морде хранить в EPROM
+char password[] = "password";     // Пароль по умолчанию. -/-
+String auth_hash;
+String readString;                // Буфер для данных от пользователя Web сервера
+
+
 byte initFlagExpected[] = {0xDE, 0xED};
 struct Settings {
   byte initFlag[2];
@@ -41,7 +48,7 @@ bool RebootFlag = false; // обозначает необходимость пе
 
 int i;
 #define buttonResetEEP  15 // 14 = A0, 15 = A1
-#define SetupResetPin  7   // номер проверочного пина для обязательного программного ресета при запуске устройства
+#define SetupResetPin  7  // номер проверочного пина для обязательного программного ресета при запуске устройства
 
 String GetRebootFlagJSON()
 {
@@ -119,22 +126,26 @@ void initPins()
     if (i != 4)
       pinMode(i, OUTPUT);
   }
-  
 }
 
 void SetupRestart()
 {
-    delay(500); 
+    delay(1000); 
     pinMode(SetupResetPin, OUTPUT);
     //програмный ресет
     int val = digitalRead(SetupResetPin);
     if (val == TURN_ON)
     {
+      Serial.println(1);
       digitalWrite(SetupResetPin, TURN_OFF);
+      Ethernet.begin(defaultMac, defaultIp);
+      serverTcp.begin();
+      server.begin();
       resetFunc();
     }
     else
     {
+      Serial.println(4);
       digitalWrite(SetupResetPin, TURN_ON);
     } 
 
@@ -142,7 +153,7 @@ void SetupRestart()
 //    val = EEPROM.read(254);
 //    if (val != 1)
 //    {
-//      Serial.println(1);// для отладки
+//      Serial.println(1); // для отладки
 //      EEPROM.write(254, 1);
 //      digitalWrite(SetupResetPin, TURN_ON);
 //      rebootArduino();
@@ -159,28 +170,32 @@ void SetupRestart()
 void setup()
 {
   Serial.begin(9600);
-  SetupRestart();
+  // SetupRestart();
   
   initSettings();
   initSD();
   initPins();
   setPins();
+  
   pins[0] = false;
-  //Serial.println("Free RAM: ");
-  //Serial.println(FreeRam());
+  // Serial.println("Free RAM: ");
+  // Serial.println(FreeRam());
+
+  // Подготавливаем строку авторизации
+  auth_hash = auth_update(login, password);
   
   Ethernet.begin(settings.mac, settings.ip, settings.gateway, settings.subnet);
-  //Ethernet.begin( settings.mac, settings.ip);
-  //Ethernet.begin(defaultMac, defaultIp);
+  // Ethernet.begin( settings.mac, settings.ip);
+  // Ethernet.begin(defaultMac, defaultIp);
   
   
   serverTcp.begin();
   server.begin();
   
   if (EnableWatchDog)
-    {
-      wdt_enable(WDTO_8S);// start wath dog!!
-    }
+  {
+    wdt_enable(WDTO_8S);// start wath dog!!
+  }
    
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
@@ -188,6 +203,59 @@ void setup()
   
 }
 
+bool checkAuth(EthernetClient* client)
+{
+      bool StopThis = 1;
+      char c;
+      while (client->available())
+      {
+          c = client->read();
+          readString += c;
+          if (readString.lastIndexOf("Authorization: Basic ") > -1)
+          {
+            while (client->available())
+            {
+                c = client->read();
+                readString += c;
+                if(c == '\n')
+                {
+                 // Serial.println(readString);
+                  if (readString.lastIndexOf(auth_hash) > -1)
+                  {
+                      StopThis = 0;
+                  }
+                  else
+                  {
+                      StopThis = 1;
+                   }
+                   break;
+                }
+            }
+            break;
+          }
+          else if(c == '\n')
+          {
+            readString = "";
+          }
+          
+      }
+      // Serial.println(readString);
+      readString = "";
+      // Serial.println(readString);
+      
+      if (StopThis)
+      {
+        Serial.println(F("5"));
+        client->println(F("HTTP/1.0 401 Unauthorized"));
+        client->println(F("WWW-Authenticate: Basic realm=\"Enter login/password\""));
+        client->println(F(""));
+        client->println(F("Content-Type: text/html"));
+        client->println(F(""));
+        client->println(F("Authorization Required"));
+        client->stop(); 
+      }
+      return StopThis;
+}
 
 void loop() {
   //digitalWrite(3, HIGH);   // turn the LED on (HIGH is the voltage level)
@@ -219,8 +287,7 @@ void loop() {
   char *filename;
   EthernetClient clientTcp = serverTcp.available();
   EthernetClient client = server.available();
-
-
+  
   
   if (client) 
   {
@@ -231,41 +298,63 @@ void loop() {
       if (client.available()) 
       {
         char c = client.read(); // считываем по одному символу запрос пользователя
-      
-        if ( c==0x0A || c==0x0D ) goto aa;    // проверка на какие то левые символы
-        if ( c<0x20 || c>0x7E ) break;
-      aa:
-        if (c != '\n' && c != '\r' && c!= '?') 
+        readString += c;
+     // if ( c==0x0A || c==0x0D ) goto aa; // проверка на какие то левые символы
+     // if ( c<0x20 || c>0x7E ) break;
+     // aa:
+     // if (c != '\n' && c != '\r' && c!= '?') 
+     //   if (c2 != c || c2 != c3 || req_index == 0 ) 
+     //if (c != -1) 
+     if (c != '\n' && c != '\r' && c!= '?')
         {       // если еще не конец строки или конец запроса, то записываем символ в строку запроса
           HTTP_req[req_index] = c;          // save HTTP request character
           req_index++;
           continue;
         }
-
-        //HTTP_req[req_index] = 0;
+        // HTTP_req[req_index] = 0;
         filename = 0;        
-    
-        //Serial.print(c);
-        // last line of client request is blank and ends with \n
-        if ((c == '\n' && currentLineIsBlank) || c == '?' && currentLineIsBlank) //если запрос уже считан (последний символ равен концу строки), начинается обработка запроса
+        
+        if (strstr(HTTP_req, "HEAD /") != 0)
         {
+            client.println(F("HTTP/1.0 401 Unauthorized"));
+            client.println(F("WWW-Authenticate: Basic realm=\"Enter login/password\""));
+            client.println(F(""));
+            client.println(F("Content-Type: text/html"));
+            client.println(F(""));
+            client.println(F("Authorization Required"));
+            client.stop();
+            break; 
+        }
+        
+          if ((c == '\n' && currentLineIsBlank) || (c == '?' && currentLineIsBlank)) //если запрос уже считан (последний символ равен концу строки), начинается обработка запроса
+          {
             // open requested web page file
+          
+            // Serial.println(HTTP_req);
+            // Serial.println(readString);
             if (strstr(HTTP_req, "GET / ")) 
             {
               filename = rootFileName;
             }
 
            if (strstr(HTTP_req, "GET /") != 0 && strstr(HTTP_req, "GET /SetPins") == 0 && strstr(HTTP_req, "GET /SetSettings") == 0 && strstr(HTTP_req, "GET /restartArduino") == 0)
-           {
+           {            
+
+              
+              if (checkAuth(&client))
+              {
+                break;
+              }
+              
               // this time no space after the /, so a sub-file
               if (!filename) filename = HTTP_req + 5; // look after the "GET /" (5 chars)
               // a little trick, look for the " HTTP/1.1" string and
               // turn the first character of the substring into a 0 to clear it out.
               (strstr(HTTP_req, " HTTP"))[0] = 0;
+        
               // print the file we want
-
               webFile = SD.open(filename);
-
+              
               if (!webFile) 
               {
                 client.println(F("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n<h2>File Not Found!</h2>"));
@@ -292,12 +381,12 @@ void loop() {
             //     client.println("Content-Type: video/mpeg");
             // else if (strstr(filename, ".pdf") != 0)
             //     client.println("Content-Type: application/pdf");
-             //else if (strstr(filename, ".xml") != 0)
-             //    client.println("Content-Type: application/xml");
+             // else if (strstr(filename, ".xml") != 0)
+             // client.println("Content-Type: application/xml");
              
              client.println();
-
-
+              
+              
               byte cB[64];
               int cC=0;
                 while (webFile.available())
@@ -307,15 +396,22 @@ void loop() {
                    if(cC > 63)
                     {
                      client.write(cB,64);
-                    cC=0;
+                     cC=0;
                     }
                    }
                   if(cC > 0) client.write(cB,cC);
                    webFile.close();
+                   delay(10);
+                   client.stop();
                    break;
+                
            }
            else if (strstr(HTTP_req, "POST /GetStatePins")) 
            {
+            if (checkAuth(&client))
+            {
+              break;
+            }
             client.println(F("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nPragma: no-cache\r\n\r\n"));
             client.println();
 
@@ -350,6 +446,10 @@ void loop() {
           }
           else if (strstr(HTTP_req, "POST /GetStateTCP")) 
            {
+            if (checkAuth(&client))
+            {
+              break;
+            }
             client.println(F("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nPragma: no-cache\r\n\r\n"));
             client.println();
              
@@ -392,7 +492,7 @@ void loop() {
              }
             strJson += "]}";
               
-            //client.println("{\"ip\":[192,168,0,178],\"sub\":[255,255,255,0],\"gw\":[192,168,0,1]}"); // for tests
+            // client.println("{\"ip\":[192,168,0,178],\"sub\":[255,255,255,0],\"gw\":[192,168,0,1]}"); // for tests
             client.println(strJson);
             
             delay(10);
@@ -402,11 +502,11 @@ void loop() {
           else if (strstr(HTTP_req, "GET /SetPins")) 
           {
             resetPins();
-            
             while (client.available())
             {
-              //read request body
+              // read request body
               char c = client.read();
+            
               if (c == 'r')
               {
                 
@@ -419,6 +519,12 @@ void loop() {
                 break;
               }
             }
+              
+            if (checkAuth(&client))
+            {
+              break;
+            }
+            
             
             setPins();
             client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"));
@@ -532,6 +638,11 @@ void loop() {
               }
             }
 
+            if (checkAuth(&client))
+            {
+              break;
+            }
+            
             if (vSub && vGw && vIp)
             {
               vSub = isValidSubnet(newSubnet);
@@ -588,6 +699,10 @@ void loop() {
           }
           else if(strstr(HTTP_req, "GET /restartArduino"))
           {
+           if (checkAuth(&client))
+            {
+              break;
+            }
            // rebootArduino(); //вызов
             client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"));
             String newIp = F("<script>window.location.href='http://");
@@ -601,23 +716,24 @@ void loop() {
             }
             newIp += F("/index.htm'</script>");
             
-            //Settings.ip[0]
+            // Settings.ip[0]
             client.println(newIp);
             delay(10);
             resetFunc(); 
             
-            
             break;
           }
-          else {
+          else 
+          {
+            if (checkAuth(&client))
+            {
+              break;
+            }
             client.println(F("HTTP/1.1 404 Not Found"));
             client.println();
             delay(10);
           }
-        } // end if ((c == '\n' && currentLineIsBlank) || c == '?' && currentLineIsBlank)
-
-          
-        
+         } // end if ((c == '\n' && currentLineIsBlank) || c == '?' && currentLineIsBlank)
         // every line of text received from the client ends with \r\n
         if (c == '\n') 
         {
@@ -633,19 +749,23 @@ void loop() {
       }// end if (client.available())
     } // end while (client.connected())
 
-    delay(10);      // give the web browser time to receive the data
-    client.stop(); // close the connection
+    delay(30);      // give the web browser time to receive the data
+    readString = "";
+    client.stop();  // close the connection
 
-  } //end if (client)
-
-  //tcp server :10001
+  } // end if (client)
+  
+  // tcp server :10001
   if (clientTcp)
   {
-    if (clientTcp.connected()) {
+    if (clientTcp.connected()) 
+    {
       int tcpIndex = 0;
-      while (clientTcp.available()) {
+      while (clientTcp.available()) 
+      {
         char c = clientTcp.read();
-        if (tcpIndex < (REQ_TCP_SZ - 1)) {
+        if (tcpIndex < (REQ_TCP_SZ - 1)) 
+        {
           reqTcp[tcpIndex] = c;
           tcpIndex++;
         }
@@ -656,7 +776,7 @@ void loop() {
       //(p1)
      
      
-     if ((reqTcp[1] == 'r' || reqTcp[1] == 'R') && (reqTcp[5] == 'n' || reqTcp[5] == 'N'))
+  if ((reqTcp[1] == 'r' || reqTcp[1] == 'R') && (reqTcp[5] == 'n' || reqTcp[5] == 'N'))
   {
     byte num = reqTcp[2] - '0';
       switch (num)
@@ -694,7 +814,7 @@ void loop() {
 
         }
   }
-   if (reqTcp[1] == 'p' || reqTcp[1] == 'P') 
+  if (reqTcp[1] == 'p' || reqTcp[1] == 'P') 
   {
     byte num = reqTcp[2] - '0';
       switch (num)
@@ -753,7 +873,6 @@ void loop() {
 
         }
   }
-  
   else if ((reqTcp[1] == 'r' || reqTcp[1] == 'R') && (reqTcp[5] == 'f' || reqTcp[5] == 'F'))
   {
     byte num = reqTcp[2] - '0';
@@ -791,15 +910,14 @@ void loop() {
               Serial.println("failed");
 
         }
-  }
-     
+     }
       StrClear(reqTcp, REQ_TCP_SZ);
     }
   }
 
     
     boolean isButtonDown = digitalRead(buttonResetEEP);
-    //Serial.println(isButtonDown);
+    // Serial.println(isButtonDown);
     if (isButtonDown) 
     {
       for (i=0; i < RESET_EEPROM_TIMEOUT; i=i+10)
@@ -865,7 +983,7 @@ void setPins()
         digitalWrite(i + 2, TURN_ON);
        // delay(500);
        // digitalWrite(i + 2, TURN_OFF);
-      // pins[i] = false;
+       // pins[i] = false;
       }
       else
       {
@@ -916,4 +1034,19 @@ bool isValidIp(int ip[4])
 bool isValidPin(byte pin)
 {
   return pin != 0 && pin != 1 && pin != 4 && pin != 10 && pin != 11 && pin != 12 && pin != 13;
+}
+
+String auth_update(char login[], char password[]) 
+{
+  // Строка для будущего хэша
+  String hash  = strcat(strcat(login, ":"),password);
+  int buf_size = hash.length()+1;
+  char buf_char[buf_size];
+  // Переводим строку в char для дальнейшей обработки base64
+  hash.toCharArray(buf_char, buf_size);
+  char encoded[base64_enc_len(buf_size-1)];
+  // Получаем хэш для авторизации
+  base64_encode(encoded, buf_char, buf_size-1);
+  // Формируем полную строку поиска "Authorization: Basic <BASE64-HASH>" чтобы не могли подсунуть хэш в GET или POST
+  return "Authorization: Basic " + String(encoded);
 }

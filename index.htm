@@ -32,8 +32,6 @@
                         document.getElementById('select_all').checked = true;
                     }
 					
-					
-					
 					if (obj.rf)
 					{
 						document.getElementById('message').style.display = '';
@@ -103,7 +101,6 @@
 			   }
 			}
 
-		
 	</script>
 
 	
@@ -116,7 +113,43 @@
 		<div class="head_title">
 			<div class="logo_"><a href="index.htm" ><img class="logo" src="files/logo.png" alt="КПА техно" title="КПА техно" /></a></div>
 			<div class="empty">&nbsp;&nbsp;&nbsp;БКА-7-1&nbsp;&nbsp;&nbsp;</div>
-			
+			<div class = "exit_panel" id = "logout">
+				<div style="float:left;"><a href="index.htm"><img title="Выход есть" src="files/ldev.gif" height="37px"/></a></div>
+				<div class = "exit_word"><a href="index.htm">Выход</a></div>
+			</div>
+			<script>
+				// logout.onclick = function(safeLocation)
+				document.getElementById('logout').onclick = function(safeLocation)
+				{
+				 var outcome, u, m = "You should be logged out now.";
+				 // IE has a simple solution for it - API:
+				 try { outcome = document.execCommand("ClearAuthenticationCache") }catch(e){}
+				 // Other browsers need a larger solution - AJAX call with special user name - 'logout'.
+				 if (!outcome) {
+					 // Let's create an xmlhttp object
+					 outcome = (function(x){
+						 if (x) {
+							 // the reason we use "random" value for password is 
+							 // that browsers cache requests. changing
+							 // password effectively behaves like cache-busing.
+							 x.open("HEAD", location.href, true, "logout", (new Date()).getTime().toString())
+							 x.send("")
+							 // x.abort()
+							 return 1 // this is **speculative** "We are done." 
+						 } else {
+							 return
+						 }
+					 })(window.XMLHttpRequest ? new window.XMLHttpRequest() : ( window.ActiveXObject ? new ActiveXObject("Microsoft.XMLHTTP") : u ))
+				 }
+				 if (!outcome) {
+					 m = "Your browser is too old or too weird to support log out functionality. Close all windows and restart the browser."
+					 alert(m)
+				 }
+				 //alert(m)
+				 // return !!outcome
+				 }
+				
+			</script>
 		</div>
 		<table border="0" width="100%" height="100%" cellpadding=0 cellspacing=0>
 		<tr><td colspan="2">

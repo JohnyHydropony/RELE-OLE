@@ -110,6 +110,32 @@ form fieldset
     border: 0;
 }
 
+.exit_panel
+{
+  float: right;
+  margin-right:15px;
+}
+
+#logout
+{
+  cursor: pointer;
+}
+.exit_word
+{
+  float:left;
+  margin-top:7px;
+}
+
+.exit_word a
+{
+  font-family:tahoma, arial, verdana, sans-serif, Lucida Sans;color:#2B587A;font-size:1em;
+}
+
+.exit_word a:hover
+{
+  color:#cc0000;
+}
+
 .logo{height:42px; min-width: 40px;}
 
 .copyright

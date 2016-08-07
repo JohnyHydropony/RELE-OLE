@@ -1,14 +1,10 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-	<link rel="icon" href="favicon.ico" type="image/x-icon">
-
-	
+	<link rel="shortcut icon" href="favicon.png" type="image/x-icon">
+	<link rel="icon" href="favicon.png" type="image/x-icon">
 	<script type="text/javascript" src="files/jquery.js"></script>
-	<script type="text/javascript" src="files/ipmask.js"></script>
-	
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8; no-cache;">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8;">
     <title>КПА техно - Настройки TCP/IP</title>
     <link rel="stylesheet" type="text/css" href="files/common.css">
 	<script>
@@ -22,6 +18,7 @@
 					document.getElementsByName('ip')[0].value = obj.ip[0] + '.' + obj.ip[1] + '.' + obj.ip[2] + '.' + obj.ip[3];
 					document.getElementsByName('sub')[0].value = obj.sub[0] + '.' + obj.sub[1] + '.' + obj.sub[2] + '.' + obj.sub[3];
 					document.getElementsByName('gw')[0].value = obj.gw[0] + '.' + obj.gw[1] + '.' + obj.gw[2] + '.' + obj.gw[3];
+					document.getElementsByName('mac')[0].value = obj.mac[0] + '-' + obj.mac[1] + '-' + obj.mac[2] + '-' + obj.mac[3] + '-' +  obj.mac[4] + '-' + obj.mac[5];
 					
 					if (obj.rf)
 					{
@@ -43,14 +40,14 @@
 		}
 	</script>
 </head>
-<body onload="JavaScript: pageLoaded();">
-<div id="content" class="effect8">
-    <div id="main_tbl">
-		<div class="head_title">
-			<div class="logo_"><a href="index.htm"><img class="logo" src="files/logo.png" alt="КПА техно" title="КПА техно" /></a></div>
-			<div class="empty">&nbsp;&nbsp;&nbsp;БКА-7-1&nbsp;&nbsp;&nbsp;</div>
+<body onload = "JavaScript: pageLoaded();">
+<div id = "content" class="effect8">
+    <div id = "main_tbl">
+		<div class = "head_title">
+			<div class = "logo_"><a href="index.htm"><img class="logo" src="files/logo.png" alt="КПА техно" title="КПА техно" /></a></div>
+			<div class = "empty">&nbsp;&nbsp;&nbsp;БКА-7-1&nbsp;&nbsp;&nbsp;</div>
 			<div class = "exit_panel" id = "logout">
-				<div style="float:left;"><a href="tcp.htm"><img title="Выход есть" src="files/ldev.gif" height="37px"/></a></div>
+				<div class="logout_img"><a href="tcp.htm"><img title="Выход" src="files/sign-out.png" height="25px"/></a></div>
 				<div class = "exit_word"><a href="tcp.htm">Выход</a></div>
 			</div>
 			<script>
@@ -81,10 +78,9 @@
 					 m = "Your browser is too old or too weird to support log out functionality. Close all windows and restart the browser."
 					 alert(m)
 				 }
-				 //alert(m)
+				 // alert(m)
 				 // return !!outcome
 				 }
-				
 			</script>
 		</div>
 	<table border=0 width="100%" height="100%" cellpadding=0 cellspacing=0>
@@ -114,7 +110,11 @@
 							<div class="lable-for">Шлюз: </div><div class="form-field"><input type="text" value="" id="gw" class="ip"name="gw"></div>
 							<div class="form-clear"></div>
 							
-							<div class="submit"><input style="margin-top:10px;" class="sbmt" type="submit" value="Сохранить"></div>
+							<div class="lable-for">Mac-адрес: </div><div class="form-field"><input type="text" value="" id="mac" name="mac"></div>
+							<div class="form-clear"></div>
+							<div class="lable-for mac">По умолчанию:</div><div class="form-field macfield">de-ad-be-ef-fe-ed</div>
+							<div class="form-clear"></div>
+							<div class="submit"><input style="margin-top:0px;" class="sbmt" type="submit" value="Сохранить"></div>
 						</div>
 						</fieldset>
 					</form>
@@ -125,11 +125,9 @@
 	
 </div>
 <div class="copyright">&copy; КПА-техно 2016 </div>
-
 <script type="text/javascript">
     $('.ip').ipmask();
+	$('#mac').macmask();
 </script>
-
-
 </body>
 </html>

@@ -4,7 +4,7 @@
 #include <SD.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
-#include <Base64.h>
+//#include <Base64.h>
 
 #define REQ_BUF_SZ   50
 #define PINS 8
@@ -23,14 +23,12 @@ EthernetServer server(80);
 EthernetServer serverTcp(10001);
 
 char HTTP_req[REQ_BUF_SZ] = {0}; // buffered HTTP request stored as null terminated string
-char reqTcp[REQ_TCP_SZ] = {0}; // buffered HTTP request stored as null terminated string
+char reqTcp[REQ_TCP_SZ] = {0};   // buffered HTTP request stored as null terminated string
 char req_index = 0;              // index into HTTP_req buffer
 
-char login[] = "login";           // Логин по дефолту. В дальнейшем необходимо измененные данные авторизации в Web морде хранить в EPROM
-char password[] = "password";     // Пароль по умолчанию. -/-
-String auth_hash;
-String readString;                // Буфер для данных от пользователя Web сервера
-
+//char login[] = "admin";           // Логин по дефолту. В дальнейшем необходимо измененные данные авторизации в Web морде хранить в EPROM
+//char password[] = "kpatechno";    // Пароль по умолчанию. -/-
+String auth_hash = "Authorization: Basic YWRtaW46a3BhdGVjaG5v"; // зашифровано login: admin, password:kpatechno; 
 
 byte initFlagExpected[] = {0xDE, 0xED};
 struct Settings {
@@ -109,13 +107,12 @@ void updateSettings()
   EEPROM.put(0, settings);
 }
 
-
 void initSD()
 {
   // initialize SD card
   if (!SD.begin(4)) {
     Serial.println("SD failed");
-    return;    // init failed
+    return;         // init failed
   }
 }
 
@@ -136,16 +133,11 @@ void SetupRestart()
     int val = digitalRead(SetupResetPin);
     if (val == TURN_ON)
     {
-      Serial.println(1);
       digitalWrite(SetupResetPin, TURN_OFF);
-      Ethernet.begin(defaultMac, defaultIp);
-      serverTcp.begin();
-      server.begin();
       resetFunc();
     }
     else
     {
-      Serial.println(4);
       digitalWrite(SetupResetPin, TURN_ON);
     } 
 
@@ -182,31 +174,27 @@ void setup()
   // Serial.println(FreeRam());
 
   // Подготавливаем строку авторизации
-  auth_hash = auth_update(login, password);
+  //auth_hash = auth_update();
   
   Ethernet.begin(settings.mac, settings.ip, settings.gateway, settings.subnet);
-  // Ethernet.begin( settings.mac, settings.ip);
-  // Ethernet.begin(defaultMac, defaultIp);
-  
-  
   serverTcp.begin();
   server.begin();
   
   if (EnableWatchDog)
   {
-    wdt_enable(WDTO_8S);// start wath dog!!
+    wdt_enable(WDTO_8S); // start wath dog!!
   }
    
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
-  
 }
 
 bool checkAuth(EthernetClient* client)
 {
       bool StopThis = 1;
       char c;
+      String readString;
       while (client->available())
       {
           c = client->read();
@@ -219,16 +207,11 @@ bool checkAuth(EthernetClient* client)
                 readString += c;
                 if(c == '\n')
                 {
-                 // Serial.println(readString);
                   if (readString.lastIndexOf(auth_hash) > -1)
                   {
                       StopThis = 0;
                   }
-                  else
-                  {
-                      StopThis = 1;
-                   }
-                   break;
+                  break;
                 }
             }
             break;
@@ -239,26 +222,20 @@ bool checkAuth(EthernetClient* client)
           }
           
       }
-      // Serial.println(readString);
       readString = "";
-      // Serial.println(readString);
       
       if (StopThis)
       {
-        Serial.println(F("5"));
         client->println(F("HTTP/1.0 401 Unauthorized"));
-        client->println(F("WWW-Authenticate: Basic realm=\"Enter login/password\""));
+        client->println(F("WWW-Authenticate: Basic realm=\"Login, please\""));
         client->println(F(""));
-        client->println(F("Content-Type: text/html"));
-        client->println(F(""));
-        client->println(F("Authorization Required"));
         client->stop(); 
       }
       return StopThis;
 }
 
 void loop() {
-  //digitalWrite(3, HIGH);   // turn the LED on (HIGH is the voltage level)
+  //  digitalWrite(3, HIGH);   // turn the LED on (HIGH is the voltage level)
   //  delay(1000);              // wait for a second
   //  digitalWrite(3, LOW);    // turn the LED off by making the voltage LOW
   //    delay(1000);              
@@ -298,7 +275,7 @@ void loop() {
       if (client.available()) 
       {
         char c = client.read(); // считываем по одному символу запрос пользователя
-        readString += c;
+        
      // if ( c==0x0A || c==0x0D ) goto aa; // проверка на какие то левые символы
      // if ( c<0x20 || c>0x7E ) break;
      // aa:
@@ -317,11 +294,8 @@ void loop() {
         if (strstr(HTTP_req, "HEAD /") != 0)
         {
             client.println(F("HTTP/1.0 401 Unauthorized"));
-            client.println(F("WWW-Authenticate: Basic realm=\"Enter login/password\""));
+            client.println(F("WWW-Authenticate: Basic realm=\"Login, please\""));
             client.println(F(""));
-            client.println(F("Content-Type: text/html"));
-            client.println(F(""));
-            client.println(F("Authorization Required"));
             client.stop();
             break; 
         }
@@ -330,8 +304,6 @@ void loop() {
           {
             // open requested web page file
           
-            // Serial.println(HTTP_req);
-            // Serial.println(readString);
             if (strstr(HTTP_req, "GET / ")) 
             {
               filename = rootFileName;
@@ -353,10 +325,18 @@ void loop() {
               (strstr(HTTP_req, " HTTP"))[0] = 0;
         
               // print the file we want
-              webFile = SD.open(filename);
+              if (strstr(filename, "jquery.js"))
+              {
+                webFile = SD.open("files/1.gz");
+              }
+              else
+              {
+                  webFile = SD.open(filename);
+              }
               
               if (!webFile) 
               {
+                
                 client.println(F("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n<h2>File Not Found!</h2>"));
                 break;
               }
@@ -368,8 +348,14 @@ void loop() {
                  client.println(F("Content-Type: text/css"));
              else if (strstr(filename, ".png") != 0)
                  client.println(F("Content-Type: image/png"));
+             else if(strstr(filename, "jquery.js"))
+             {
+                  client.println(F("Content-Type: application/x-javascript\r\nContent-Encoding: gzip"));
+             }
              else if (strstr(filename, ".js") != 0)
-                 client.println(F("Content-Type: application/x-javascript"));
+                 client.println(F("Content-Type: text/javascript"));
+             //else if (strstr(filename, ".js") != 0)
+             //    client.println(F("Content-Type: application/x-javascript"));
              else
                  client.println(F("Content-Type: text"));
             // for econom ozu disable file type if not use
@@ -490,9 +476,24 @@ void loop() {
                   strJson += ",";
                 }
              }
+
+             strJson += "],\"mac\":[";
+
+             for (i = 0; i < 6; ++i)
+             {
+              //  strJson += settings.mac[i];
+              strJson += F("\"");
+              strJson += String(settings.mac[i], HEX);
+              strJson += F("\"");
+                if (i < 5)
+                {
+                  strJson += ",";
+                }
+             }
             strJson += "]}";
               
             // client.println("{\"ip\":[192,168,0,178],\"sub\":[255,255,255,0],\"gw\":[192,168,0,1]}"); // for tests
+            //Serial.println(strJson);
             client.println(strJson);
             
             delay(10);
@@ -524,8 +525,6 @@ void loop() {
             {
               break;
             }
-            
-            
             setPins();
             client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"));
             client.println(F("<script>window.location.href='index.htm'</script>"));
@@ -537,26 +536,30 @@ void loop() {
             int newIp[4];
             int newSubnet[4];
             int newGateway[4];
+            //int newMac[6];
+            int newMac[6];
             int paramCt = 0;
-            bool vIp = true, vSub = true, vGw = true;
-            while (client.available() && vIp && vSub && vGw)
+            bool vIp = true, vSub = true, vGw = true, vMac = true;
+            while (client.available() && vIp && vSub && vGw && vMac)
             {
-              //read request body
-              //e.g. ip=192.168.0.9&sub=255.255.0.0&gw=192.168.0.1
+              // read request body
+              // e.g. ip=192.168.0.9&sub=255.255.0.0&gw=192.168.0.1, mac = DE-AD-BE-EF-FE-ED
               char c = client.read();
               
               if (c == '=')
               {
                 //e.g. 192.168.0.9
                 int buf = 0;
+                char buf_char[2];
                 int placeCt = 0;
-                
+                //byte buf_mac = 0;
+                int buf_mac_count = 0; 
                 while (client.available())
                 {
                   bool validSym = false;
                   char dig = client.read();
                   
-                  if (isdigit(dig))
+                  if (isdigit(dig) && paramCt != 3)
                   {
                     if (!buf)
                     {
@@ -569,8 +572,14 @@ void loop() {
                     }
                     validSym = true;
                   }
+                  else if (paramCt == 3 && normMacSym(dig)) // mac-адрес включает символы латиницы, учтем это
+                  {
+                     buf_char[buf_mac_count] = dig;
+                     validSym = true;
+                     buf_mac_count++;
+                  }
                   
-                  if ((dig == '.' || dig == '&' || !client.available() || dig == ' '))
+                  if (dig == '.' || dig == '-' || dig == '&' || !client.available() || dig == ' ')
                   {
                     switch (paramCt)
                     {
@@ -583,18 +592,29 @@ void loop() {
                       case 2:
                         newGateway[placeCt] = buf;
                         break;
+                      case 3:
+                        unsigned long result = strtoul(buf_char, NULL, 16); 
+                        newMac[placeCt] = result;
+                        if (buf_mac_count < 2)
+                        {
+                          vMac=false;
+                        }
+                        
+                        buf_mac_count = 0;
+                        break;
                     }
+                    
                     placeCt++;
                     buf = 0;
-                    //if (dig == '\r' || dig == '&')
+                    
+                    // if (dig == '\r' || dig == '&')
                     if (dig == ' ' || dig == '\r'|| dig == '&')
                     {
                       break;
                     }
                     validSym = true;
-                    
                   }
-                  else if (!validSym && dig != 's' && dig != 'u' && dig != 'b' && dig != 'g' && dig != 'w'&& dig != 'i' && dig != 'p' && dig != '=' && dig != '.' && dig != '&' )
+                  else if (paramCt != 3 && !validSym && dig != 's' && dig != 'u' && dig != 'b' && dig != 'g' && dig != 'w'&& dig != 'i' && dig != 'p'&& dig != 'm'&& dig != 'a' && dig != 'c' && dig != '=' && dig != '.'&& dig != '-' && dig != '&' )
                   {
                     switch (paramCt)
                     {
@@ -604,16 +624,19 @@ void loop() {
                       case 1:
                         vSub = false;
                         break;
-                      case 2:
-                        vGw = false;
-                        break;
+                  // case 3:
+                  // vMac = false;
+                  // break;
                     }
                   }
-                  
+                  else if(paramCt == 3 && !validSym && dig != 'm' && dig != 'a' && dig != 'c')
+                  {
+                    vMac = false;
+                    break;
+                  }
                 }
-                
 
-                if (placeCt != 4)
+                if (placeCt != 4 && paramCt != 3)
                 {
                   switch (paramCt)
                   {
@@ -626,8 +649,18 @@ void loop() {
                     case 2:
                       vGw = false;
                       break;
-                  }
+                    }
                 }
+                else if(placeCt != 6 && paramCt == 3)
+                {
+                  switch (paramCt)
+                
+                  {
+                    case 3:
+                      vMac = false;
+                      break;
+                    }
+                }    
                 paramCt++;
                 
               }
@@ -643,31 +676,39 @@ void loop() {
               break;
             }
             
-            if (vSub && vGw && vIp)
+            if (vSub && vGw && vIp && vMac)
             {
               vSub = isValidSubnet(newSubnet);
-              vGw = isValidIp(newGateway);
-              vIp = isValidIp(newIp);
+              vGw  = isValidIp(newGateway);
+              vIp  = isValidIp(newIp);
+              vMac = isValidMac(newMac);
             }
             
-            if (vSub && vGw && vIp)
+            if (vSub && vGw && vIp && vMac)
             {
               settings.ip[0] = newIp[0];
               settings.ip[1] = newIp[1];
               settings.ip[2] = newIp[2];
               settings.ip[3] = newIp[3];
-              settings.subnet[0] = newSubnet[0];
-              settings.subnet[1] = newSubnet[1];
-              settings.subnet[2] = newSubnet[2];
-              settings.subnet[3] = newSubnet[3];
+              settings.subnet[0]  = newSubnet[0];
+              settings.subnet[1]  = newSubnet[1];
+              settings.subnet[2]  = newSubnet[2];
+              settings.subnet[3]  = newSubnet[3];
               settings.gateway[0] = newGateway[0];
               settings.gateway[1] = newGateway[1];
               settings.gateway[2] = newGateway[2];
               settings.gateway[3] = newGateway[3];
+              settings.mac[0] = newMac[0];
+              settings.mac[1] = newMac[1];
+              settings.mac[2] = newMac[2];
+              settings.mac[3] = newMac[3];
+              settings.mac[4] = newMac[4];
+              settings.mac[5] = newMac[5];
+
               updateSettings();
               client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nPragma: no-cache\r\n\r\n"));
-              //client.println("Location: /");
-              //client.println(F("<script>alert('Configuration is OK. Page reboot.'); window.location.href='tcp.htm'</script>"));
+              // client.println("Location: /");
+              // client.println(F("<script>alert('Configuration is OK. Page reboot.'); window.location.href='tcp.htm'</script>"));
               client.println(F("<script>window.location.href='tcp.htm'</script>"));
               delay(10);
               break;
@@ -692,7 +733,11 @@ void loop() {
               {
                 client.print(F("<li>Шлюз</li>"));
               }
-              client.print(F("<br/><a href='/'>Вернуться</a></ul></body></html>"));
+               if (!vMac)
+              {
+                client.print(F("<li>Mac-адрес</li>"));
+              }
+              client.print(F("<br/><a href='JavaScript:window.history.go(-1)'>Вернуться</a></ul></body></html>"));
               break;
             }
 
@@ -703,9 +748,9 @@ void loop() {
             {
               break;
             }
-           // rebootArduino(); //вызов
-            client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"));
-            String newIp = F("<script>window.location.href='http://");
+            // rebootArduino(); //вызов
+            client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+            String newIp = F("<html><body><script>window.location.href='http://");
             for (i=0; i < 4; ++i)
             {
               newIp += settings.ip[i];
@@ -714,13 +759,12 @@ void loop() {
                newIp += ".";
               }
             }
-            newIp += F("/index.htm'</script>");
-            
+            newIp += F("/index.htm'</script></body></html>");
             // Settings.ip[0]
             client.println(newIp);
             delay(10);
+            client.stop();
             resetFunc(); 
-            
             break;
           }
           else 
@@ -729,12 +773,13 @@ void loop() {
             {
               break;
             }
+         
             client.println(F("HTTP/1.1 404 Not Found"));
             client.println();
             delay(10);
           }
          } // end if ((c == '\n' && currentLineIsBlank) || c == '?' && currentLineIsBlank)
-        // every line of text received from the client ends with \r\n
+           // every line of text received from the client ends with \r\n
         if (c == '\n') 
         {
           // last character on line of received text
@@ -750,7 +795,6 @@ void loop() {
     } // end while (client.connected())
 
     delay(30);      // give the web browser time to receive the data
-    readString = "";
     client.stop();  // close the connection
 
   } // end if (client)
@@ -1036,17 +1080,52 @@ bool isValidPin(byte pin)
   return pin != 0 && pin != 1 && pin != 4 && pin != 10 && pin != 11 && pin != 12 && pin != 13;
 }
 
-String auth_update(char login[], char password[]) 
+bool isValidMac(int mac[6])
 {
-  // Строка для будущего хэша
-  String hash  = strcat(strcat(login, ":"),password);
-  int buf_size = hash.length()+1;
-  char buf_char[buf_size];
-  // Переводим строку в char для дальнейшей обработки base64
-  hash.toCharArray(buf_char, buf_size);
-  char encoded[base64_enc_len(buf_size-1)];
-  // Получаем хэш для авторизации
-  base64_encode(encoded, buf_char, buf_size-1);
-  // Формируем полную строку поиска "Authorization: Basic <BASE64-HASH>" чтобы не могли подсунуть хэш в GET или POST
-  return "Authorization: Basic " + String(encoded);
+  return mac[0] >= 0 && mac[0] <= 255 && mac[1] >= 0 && mac[1] <= 255 && mac[2] >= 0 && mac[2] <= 255 && mac[3] >= 0 && mac[3] <= 255&& mac[4] >= 0 && mac[4] <= 255&& mac[5] >= 0 && mac[5] <= 255;
 }
+
+bool inArray(char mac_sym[], char dig)
+{
+  //int sizeArr = sizeof(mac_sym);
+  int sizeArr = 22;
+  int i = 0;
+    for (i=0; i<sizeArr; ++i)
+    {
+//      Serial.println(dig);
+//      Serial.println(mac_sym[i]);
+      if (dig == mac_sym[i])
+      {
+        return true;
+      }
+    }
+    return false;
+}
+
+bool normMacSym(char dig)
+{
+    char mac_sym[] = {'a','b','c','d','e','f','A','B','C','D','E','F','0','1','2','3','4','5','6','7','8','9'};
+   // char mac_sym = "abcdef";
+    if (inArray(mac_sym, dig) != 0)
+    {
+      return true;
+    }
+    return false;
+}
+
+//String auth_update(char login[], char password[]) 
+//{
+//  // Строка для будущего хэша
+//  String hash  = strcat(strcat(login, ":"),password);
+//  int buf_size = hash.length()+1;
+//  char buf_char[buf_size];
+//  // Переводим строку в char для дальнейшей обработки base64
+//  hash.toCharArray(buf_char, buf_size);
+//  char encoded[base64_enc_len(buf_size-1)];
+//  // Получаем хэш для авторизации
+//  base64_encode(encoded, buf_char, buf_size-1);
+//  // Формируем полную строку поиска "Authorization: Basic <BASE64-HASH>" чтобы не могли подсунуть хэш в GET или POST
+//  Serial.println(encoded);
+  //return "Authorization: Basic " + String(encoded);
+  //return "Authorization: Basic YWRtaW46a3BhdGVjaG5v";
+//}

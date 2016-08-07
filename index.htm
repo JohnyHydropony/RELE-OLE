@@ -1,15 +1,11 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-	<link rel="icon" href="favicon.ico" type="image/x-icon">
-
+	<link rel="shortcut icon" href="favicon.png" type="image/x-icon">
+	<link rel="icon" href="favicon.png" type="image/x-icon">
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>КПА техно - Управление реле</title>
-		
     <link rel="stylesheet" type="text/css" href="files/common.css">
-	
-	
 	<script>
 		function pageLoaded() {
 			  var req=new XMLHttpRequest();
@@ -40,11 +36,12 @@
 					{
 						document.getElementById('message').style.display = 'none';
 					}
-					//document.getElementsByName('ip')[0].value = obj.ip[0] + '.' + obj.ip[1] + '.' + obj.ip[2] + '.' + obj.ip[3];
-					//document.getElementsByName('sub')[0].value = obj.sub[0] + '.' + obj.sub[1] + '.' + obj.sub[2] + '.' + obj.sub[3];
-					//document.getElementsByName('gw')[0].value = obj.gw[0] + '.' + obj.gw[1] + '.' + obj.gw[2] + '.' + obj.gw[3];
+					// document.getElementsByName('ip')[0].value = obj.ip[0] + '.' + obj.ip[1] + '.' + obj.ip[2] + '.' + obj.ip[3];
+					// document.getElementsByName('sub')[0].value = obj.sub[0] + '.' + obj.sub[1] + '.' + obj.sub[2] + '.' + obj.sub[3];
+					// document.getElementsByName('gw')[0].value = obj.gw[0] + '.' + obj.gw[1] + '.' + obj.gw[2] + '.' + obj.gw[3];
 				}
-				else {
+				else
+				{
 					alert("An error has occured making the request");
 				}
 				}
@@ -53,8 +50,6 @@
 			req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 			req.send();
 		  }
-		  
-		  
 		  
 		  if(document.getElementsByClassName) {
  
@@ -82,8 +77,6 @@
 					return result
 				}
 			}
-		  
-		  
 		  var check_check = '0';
 		  function sel_all2(ClassName){
 			   if( !getElementsByClass(ClassName) ) return;
@@ -100,21 +93,16 @@
 				  else check_check = '0';
 			   }
 			}
-
 	</script>
-
-	
 </head>
 <body onLoad="JavaScript: pageLoaded();">
 <div id="content" class="effect8">
-
-		
-    <div id="main_tbl">
+	<div id="main_tbl">
 		<div class="head_title">
 			<div class="logo_"><a href="index.htm" ><img class="logo" src="files/logo.png" alt="КПА техно" title="КПА техно" /></a></div>
 			<div class="empty">&nbsp;&nbsp;&nbsp;БКА-7-1&nbsp;&nbsp;&nbsp;</div>
 			<div class = "exit_panel" id = "logout">
-				<div style="float:left;"><a href="index.htm"><img title="Выход есть" src="files/ldev.gif" height="37px"/></a></div>
+				<div class="logout_img"><a href="tcp.htm"><img title="Выход" src="files/sign-out.png" height="25px"/></a></div>
 				<div class = "exit_word"><a href="index.htm">Выход</a></div>
 			</div>
 			<script>
@@ -180,11 +168,9 @@
 						<input type="submit" value="Обновить" class="sbmt">
 					</fieldset>
 				</form>
-		<script>//$(".ios").iosCheckbox();</script>
 	</div>
 		</td></tr></table>
      </div>
-	
 </div>
 <div class="copyright">&copy; КПА-техно 2016 </div>
 </body>

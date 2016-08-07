@@ -120,6 +120,12 @@ form fieldset
 {
   cursor: pointer;
 }
+
+.logout_img
+{
+  float:left; margin-right:5px; margin-top:5px;
+}
+
 .exit_word
 {
   float:left;
@@ -224,6 +230,9 @@ form fieldset
 {
   width:100%; display: block; clear:both;
 }
+
+.mac{display:block;float:left;color:gray;font-size:13px;margin-top:3px;}
+.macfield{float:left;color:gray;font-size:13px;margin-top:3px;}
 
 .submit
 {

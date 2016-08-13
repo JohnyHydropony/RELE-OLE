@@ -15,7 +15,7 @@
 #define RESET_EEPROM_TIMEOUT 5000 //время задержки кнопки, для сброса EEPROM, микросекунды (1с = 1000мкс)
 
 byte defaultMac[]  = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-byte defaultIp[] = { 192, 168, 0, 177 };
+byte defaultIp[] = { 192, 168, 0, 123 };
 byte defaultGateway[] = { 192, 168, 0, 1 };
 byte defaultSubnet[] = { 255, 255, 255, 0 };
 
@@ -68,7 +68,7 @@ boolean isFirstRun()
          settings.initFlag[1] != initFlagExpected[1];
 }
 
-void rebootArduino() 
+void rebootDevice() 
 {
   wdt_disable(); 
   wdt_enable(WDTO_15MS);
@@ -148,7 +148,7 @@ void SetupRestart()
 //      Serial.println(1); // для отладки
 //      EEPROM.write(254, 1);
 //      digitalWrite(SetupResetPin, TURN_ON);
-//      rebootArduino();
+//      rebootDevice();
 //    }
 //    else
 //    {
@@ -177,6 +177,7 @@ void setup()
   //auth_hash = auth_update();
   
   Ethernet.begin(settings.mac, settings.ip, settings.gateway, settings.subnet);
+  //Ethernet.begin(defaultMac, settings.ip, settings.gateway, settings.subnet);
   serverTcp.begin();
   server.begin();
   
@@ -309,7 +310,7 @@ void loop() {
               filename = rootFileName;
             }
 
-           if (strstr(HTTP_req, "GET /") != 0 && strstr(HTTP_req, "GET /SetPins") == 0 && strstr(HTTP_req, "GET /SetSettings") == 0 && strstr(HTTP_req, "GET /restartArduino") == 0)
+           if (strstr(HTTP_req, "GET /") != 0 && strstr(HTTP_req, "GET /SetPins") == 0 && strstr(HTTP_req, "GET /SetSettings") == 0 && strstr(HTTP_req, "GET /restart") == 0)
            {            
 
               
@@ -483,6 +484,10 @@ void loop() {
              {
               //  strJson += settings.mac[i];
               strJson += F("\"");
+              if(settings.mac[i] < 15)
+              {
+                strJson += "0";
+              }
               strJson += String(settings.mac[i], HEX);
               strJson += F("\"");
                 if (i < 5)
@@ -493,7 +498,7 @@ void loop() {
             strJson += "]}";
               
             // client.println("{\"ip\":[192,168,0,178],\"sub\":[255,255,255,0],\"gw\":[192,168,0,1]}"); // for tests
-            //Serial.println(strJson);
+            // Serial.println(strJson);
             client.println(strJson);
             
             delay(10);
@@ -593,8 +598,14 @@ void loop() {
                         newGateway[placeCt] = buf;
                         break;
                       case 3:
+                        //char buf_char2[4];
+                        //buf_char2[0] = String("0");
+                        //buf_char2[2] = buf_char[0];
+                        //buf_char2[3] = buf_char[1];
+                        
                         unsigned long result = strtoul(buf_char, NULL, 16); 
                         newMac[placeCt] = result;
+                        
                         if (buf_mac_count < 2)
                         {
                           vMac=false;
@@ -742,13 +753,13 @@ void loop() {
             }
 
           }
-          else if(strstr(HTTP_req, "GET /restartArduino"))
+          else if(strstr(HTTP_req, "GET /restart"))
           {
            if (checkAuth(&client))
             {
               break;
             }
-            // rebootArduino(); //вызов
+            // rebootDevice(); //вызов
             client.println(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
             String newIp = F("<html><body><script>window.location.href='http://");
             for (i=0; i < 4; ++i)

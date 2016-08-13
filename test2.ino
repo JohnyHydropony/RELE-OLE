@@ -68,12 +68,12 @@ boolean isFirstRun()
          settings.initFlag[1] != initFlagExpected[1];
 }
 
-void rebootDevice() 
-{
-  wdt_disable(); 
-  wdt_enable(WDTO_15MS);
-  while (1) {}
-}
+//void rebootDevice() 
+//{
+//  wdt_disable(); 
+//  wdt_enable(WDTO_15MS);
+//  while (1) {}
+//}
 
 void(* resetFunc) (void) = 0; // Reset MC function
 
@@ -111,7 +111,7 @@ void initSD()
 {
   // initialize SD card
   if (!SD.begin(4)) {
-    Serial.println("SD failed");
+    //Serial.println("SD failed");
     return;         // init failed
   }
 }
@@ -125,39 +125,39 @@ void initPins()
   }
 }
 
-void SetupRestart()
-{
-    delay(1000); 
-    pinMode(SetupResetPin, OUTPUT);
-    //програмный ресет
-    int val = digitalRead(SetupResetPin);
-    if (val == TURN_ON)
-    {
-      digitalWrite(SetupResetPin, TURN_OFF);
-      resetFunc();
-    }
-    else
-    {
-      digitalWrite(SetupResetPin, TURN_ON);
-    } 
-
-//    byte val; // полный ресет (с использованием вотчдога)
-//    val = EEPROM.read(254);
-//    if (val != 1)
+//void SetupRestart()
+//{
+//    delay(1000); 
+//    pinMode(SetupResetPin, OUTPUT);
+//    //програмный ресет
+//    int val = digitalRead(SetupResetPin);
+//    if (val == TURN_ON)
 //    {
-//      Serial.println(1); // для отладки
-//      EEPROM.write(254, 1);
-//      digitalWrite(SetupResetPin, TURN_ON);
-//      rebootDevice();
+//      digitalWrite(SetupResetPin, TURN_OFF);
+//      resetFunc();
 //    }
 //    else
 //    {
 //      digitalWrite(SetupResetPin, TURN_ON);
-//      Serial.println(2);// для отладки
-//      EEPROM.write(254, 0);
-//    }
-
-}
+//    } 
+//
+////    byte val; // полный ресет (с использованием вотчдога)
+////    val = EEPROM.read(254);
+////    if (val != 1)
+////    {
+////      Serial.println(1); // для отладки
+////      EEPROM.write(254, 1);
+////      digitalWrite(SetupResetPin, TURN_ON);
+////      rebootDevice();
+////    }
+////    else
+////    {
+////      digitalWrite(SetupResetPin, TURN_ON);
+////      Serial.println(2);// для отладки
+////      EEPROM.write(254, 0);
+////    }
+//
+//}
 
 void setup()
 {
@@ -176,8 +176,8 @@ void setup()
   // Подготавливаем строку авторизации
   //auth_hash = auth_update();
   
-  Ethernet.begin(settings.mac, settings.ip, settings.gateway, settings.subnet);
-  //Ethernet.begin(defaultMac, settings.ip, settings.gateway, settings.subnet);
+  //Ethernet.begin(settings.mac, settings.ip, settings.gateway, settings.subnet);
+  Ethernet.begin(defaultMac, settings.ip, settings.gateway, settings.subnet);
   serverTcp.begin();
   server.begin();
   
@@ -294,6 +294,7 @@ void loop() {
         
         if (strstr(HTTP_req, "HEAD /") != 0)
         {
+            
             client.println(F("HTTP/1.0 401 Unauthorized"));
             client.println(F("WWW-Authenticate: Basic realm=\"Login, please\""));
             client.println(F(""));
@@ -312,9 +313,7 @@ void loop() {
 
            if (strstr(HTTP_req, "GET /") != 0 && strstr(HTTP_req, "GET /SetPins") == 0 && strstr(HTTP_req, "GET /SetSettings") == 0 && strstr(HTTP_req, "GET /restart") == 0)
            {            
-
-              
-              if (checkAuth(&client))
+               if (checkAuth(&client))
               {
                 break;
               }
@@ -328,13 +327,12 @@ void loop() {
               // print the file we want
               if (strstr(filename, "jquery.js"))
               {
-                webFile = SD.open("files/1.gz");
+                webFile = SD.open(F("files/1.gz"));
               }
               else
               {
                   webFile = SD.open(filename);
               }
-              
               if (!webFile) 
               {
                 
@@ -403,27 +401,27 @@ void loop() {
             client.println();
 
              String strJson="";
-             strJson += "{";
+             strJson += F("{");
              strJson += GetRebootFlagJSON();
-             strJson += "\"r\":[";
+             strJson += F("\"r\":[");
              //strJson = "{\"r\":[";
              for (i = 0; i < PINS; ++i)
              {
                 if (pins[i])
                 {
-                  strJson += "1";
+                  strJson += F("1");
                 }
                 else
                 {
-                  strJson += "0";
+                  strJson += F("0");
                 }
                 if (i<(PINS-1))
                 {
-                  strJson += ",";
+                  strJson += F(",");
                 }
                 
               }
-              strJson += "]}";
+              strJson += F("]}");
              //client.println("{\"r\":[1,1,1,0 ,1,1,1,1]}"); // for tests
              client.println(strJson);
              
@@ -441,20 +439,20 @@ void loop() {
             client.println();
              
              String strJson="";
-             strJson += "{";
+             strJson += F("{");
              strJson += GetRebootFlagJSON();
-             strJson += "\"ip\":[";
+             strJson += F("\"ip\":[");
              for (i = 0; i < 4; ++i)
              {
                 strJson += settings.ip[i];
                 
                 if (i < 3)
                 {
-                  strJson += ",";
+                  strJson += F(",");
                 }
               }
               
-             strJson += "],\"sub\":[";
+             strJson += F("],\"sub\":[");
 
              for (i = 0; i < 4; ++i)
              {
@@ -462,11 +460,11 @@ void loop() {
                 
                 if (i < 3)
                 {
-                  strJson += ",";
+                  strJson += F(",");
                 }
               }
               
-              strJson += "],\"gw\":[";
+              strJson += F("],\"gw\":[");
 
              for (i = 0; i < 4; ++i)
              {
@@ -474,11 +472,11 @@ void loop() {
                 
                 if (i < 3)
                 {
-                  strJson += ",";
+                  strJson += F(",");
                 }
              }
 
-             strJson += "],\"mac\":[";
+             strJson += F("],\"mac\":[");
 
              for (i = 0; i < 6; ++i)
              {
@@ -486,13 +484,13 @@ void loop() {
               strJson += F("\"");
               if(settings.mac[i] < 15)
               {
-                strJson += "0";
+                strJson += F("0");
               }
               strJson += String(settings.mac[i], HEX);
               strJson += F("\"");
                 if (i < 5)
                 {
-                  strJson += ",";
+                  strJson += F(",");
                 }
              }
             strJson += "]}";
@@ -598,10 +596,6 @@ void loop() {
                         newGateway[placeCt] = buf;
                         break;
                       case 3:
-                        //char buf_char2[4];
-                        //buf_char2[0] = String("0");
-                        //buf_char2[2] = buf_char[0];
-                        //buf_char2[3] = buf_char[1];
                         
                         unsigned long result = strtoul(buf_char, NULL, 16); 
                         newMac[placeCt] = result;
@@ -618,7 +612,6 @@ void loop() {
                     placeCt++;
                     buf = 0;
                     
-                    // if (dig == '\r' || dig == '&')
                     if (dig == ' ' || dig == '\r'|| dig == '&')
                     {
                       break;
